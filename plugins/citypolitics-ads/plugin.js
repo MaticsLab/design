@@ -58,9 +58,16 @@ function newBoard(size, name) {
   const b = penpot.createBoard();
   b.name = name || `City Politics · ${s.label}`;
   b.resize(s.w, s.h);
-  const c = center();
-  b.x = c.x - s.w / 2;
-  b.y = c.y - s.h / 2;
+  // Below the page's other ad boards (so new ones never cover old ones), else at the viewport's center.
+  const others = adBoards();
+  if (others.length) {
+    b.x = Math.min(...others.map((o) => o.x));
+    b.y = Math.max(...others.map((o) => o.y + o.height)) + 60;
+  } else {
+    const c = center();
+    b.x = c.x - s.w / 2;
+    b.y = c.y - s.h / 2;
+  }
   b.fills = [{ fillColor: BRAND.paper, fillOpacity: 1 }];
   b.clipContent = true;
   put(b, 'size', size);
@@ -103,10 +110,11 @@ function addRect(board, { x, y, w, h, color, radius = 0, slot = null, name = nul
 
 /** Layout boxes per size, as fractions of the board: [x, y, w, h]. */
 const LAYOUTS = {
-  '728x90': { photo: [0.83, 0, 0.17, 1], kicker: [0.025, 0.1, 0.5, 0.22], headline: [0.025, 0.3, 0.56, 0.42], body: [0.025, 0.7, 0.56, 0.22], button: [0.61, 0.28, 0.19, 0.44] },
-  '468x60': { photo: [0.8, 0, 0.2, 1], kicker: [0.03, 0.06, 0.5, 0.26], headline: [0.03, 0.3, 0.52, 0.45], body: [0.03, 0.72, 0.52, 0.22], button: [0.57, 0.25, 0.21, 0.5] },
-  '320x50': { photo: [0.82, 0, 0.18, 1], kicker: [0.03, 0.04, 0.5, 0.3], headline: [0.03, 0.3, 0.5, 0.5], body: null, button: [0.55, 0.22, 0.25, 0.56] },
-  '300x250': { photo: [0, 0, 1, 0.44], kicker: [0.06, 0.47, 0.88, 0.08], headline: [0.06, 0.55, 0.88, 0.17], body: [0.06, 0.71, 0.88, 0.12], button: [0.06, 0.84, 0.5, 0.11] },
+  // The bottom ~14% stays clear on every size: that's where a political ad's "Paid for by" line goes.
+  '728x90': { photo: [0.83, 0, 0.17, 1], kicker: [0.025, 0.06, 0.5, 0.2], headline: [0.025, 0.24, 0.56, 0.38], body: [0.025, 0.6, 0.56, 0.22], button: [0.61, 0.24, 0.19, 0.44] },
+  '468x60': { photo: [0.8, 0, 0.2, 1], kicker: [0.03, 0.04, 0.5, 0.24], headline: [0.03, 0.27, 0.52, 0.42], body: [0.03, 0.68, 0.52, 0.16], button: [0.57, 0.2, 0.21, 0.48] },
+  '320x50': { photo: [0.82, 0, 0.18, 1], kicker: [0.03, 0.02, 0.5, 0.26], headline: [0.03, 0.28, 0.5, 0.46], body: null, button: [0.55, 0.16, 0.25, 0.56] },
+  '300x250': { photo: [0, 0, 1, 0.44], kicker: [0.06, 0.47, 0.88, 0.08], headline: [0.06, 0.55, 0.88, 0.15], body: [0.06, 0.69, 0.88, 0.1], button: [0.06, 0.8, 0.5, 0.1] },
   native: { photo: [0, 0, 0.42, 1], kicker: [0.46, 0.08, 0.5, 0.08], headline: [0.46, 0.18, 0.5, 0.34], body: [0.46, 0.52, 0.5, 0.22], button: [0.46, 0.78, 0.3, 0.13] },
 };
 const TEMPLATES = {
@@ -121,15 +129,19 @@ function insertTemplate(id, size) {
   const b = newBoard(size, `${t.name} · ${S.label}`);
   b.fills = [{ fillColor: t.bg, fillOpacity: 1 }];
   const box = (k) => { const [x, y, w, h] = L[k]; return { x: Math.round(x * S.w), y: Math.round(y * S.h), w: Math.round(w * S.w), h: Math.round(h * S.h) }; };
-  const scale = Math.min(S.w / 728, S.h / 90, 1) * (size === '300x250' || size === 'native' ? 2.2 : 1);
+  // Text sized to fit its box: by the box's height, and by its width for the text's length.
+  const fit = (k, text, lines, max) => { const bx = box(k); return Math.max(8, Math.min(max, Math.floor((bx.h / lines) * 0.8), Math.floor((bx.w * lines) / (text.length * 0.56)))); };
   const photo = addRect(b, { ...box('photo'), color: '#d9d4c7', slot: { kind: 'image', key: 'photo' }, name: 'Photo (slot: image)' });
   void photo;
-  addText(b, t.kicker, { ...box('kicker'), size: Math.max(8, Math.round(10 * scale)), weight: '700', color: t.accent, name: 'Kicker' });
-  addText(b, t.headline, { ...box('headline'), size: Math.max(12, Math.round(22 * scale)), weight: '800', slot: { kind: 'headline', key: 'headline' }, name: 'Headline (slot)' });
-  if (L.body) addText(b, t.body, { ...box('body'), size: Math.max(9, Math.round(11 * scale)), color: '#444444', slot: { kind: 'body', key: 'body' }, name: 'Body (slot)' });
+  const tall = size === '300x250' || size === 'native';
+  addText(b, t.kicker, { ...box('kicker'), size: fit('kicker', t.kicker, 1, 14), weight: '700', color: t.accent, name: 'Kicker' });
+  addText(b, t.headline, { ...box('headline'), size: fit('headline', t.headline, tall ? 2 : 1, 40), weight: '800', slot: { kind: 'headline', key: 'headline' }, name: 'Headline (slot)' });
+  if (L.body) addText(b, t.body, { ...box('body'), size: fit('body', t.body, tall ? 2 : 1, 18), color: '#444444', slot: { kind: 'body', key: 'body' }, name: 'Body (slot)' });
   const bb = box('button');
   addRect(b, { ...bb, color: t.accent, radius: Math.round(bb.h / 4), slot: { kind: 'color', key: 'buttonColor' }, name: 'Button color (slot)' });
-  addText(b, t.button, { ...bb, size: Math.max(10, Math.round(13 * scale)), weight: '700', color: BRAND.paper, align: 'center', slot: { kind: 'button', key: 'cta' }, name: 'Button text (slot)' });
+  const label = addText(b, t.button, { ...bb, size: Math.min(fit('button', t.button, 1, 18), Math.floor(bb.h * 0.5)), weight: '700', color: BRAND.paper, align: 'center', slot: { kind: 'button', key: 'cta' }, name: 'Button text (slot)' });
+  // Penpot puts each new child under the ones before it: the label goes over its button.
+  try { label?.bringToFront(); } catch { /* ordering is best effort */ }
   put(b, 'link', 'https://example.org/');
   if (t.political) setPolitical(b, 'Friends of Ana Rivera');
   penpot.selection = [b];
@@ -142,7 +154,7 @@ const disclaimerOf = (board) => allShapes(board).find((s) => s !== board && get(
 
 function disclaimerBox(board) {
   const s = SIZES[get(board, 'size')] || { w: board.width, h: board.height };
-  const h = Math.max(10, Math.min(16, Math.round(s.h * 0.16)));
+  const h = Math.max(10, Math.min(16, Math.round(s.h * 0.14)));
   return { x: 0, y: s.h - h, w: Math.min(s.w, Math.max(160, Math.round(s.w * 0.5))), h };
 }
 
@@ -151,17 +163,20 @@ function ensureDisclaimer(board) {
   let d = disclaimerOf(board);
   if (!pol?.paidForBy) { if (d) { d.blocked = false; d.remove(); } return null; }
   const text = `Paid for by ${pol.paidForBy}`;
+  let created = false;
   if (!d) {
+    created = true;
     const bx = disclaimerBox(board);
     d = addText(board, text, { ...bx, size: Math.max(8, bx.h - 4), weight: '500', color: BRAND.ink, slot: { kind: 'disclaimer' }, name: 'Paid for by (locked)' });
     if (!d) return null;
   }
-  if (d.characters !== text) d.characters = text;
-  if (Number(d.fontSize) < 8) d.fontSize = '8';
-  if (d.hidden) d.hidden = false;
-  if (!d.blocked) d.blocked = true;
-  // Keep it on top.
-  try { if (d.parent === board && board.children[board.children.length - 1] !== d) board.appendChild(d); } catch { /* ordering is best effort */ }
+  // Put back whatever was changed (and only then touch the file, so the guard adds nothing to undo otherwise).
+  let fixed = created;
+  if (d.characters !== text) { d.characters = text; fixed = true; }
+  if (Number(d.fontSize) < 8) { d.fontSize = '8'; fixed = true; }
+  if (d.hidden) { d.hidden = false; fixed = true; }
+  if (!d.blocked) { d.blocked = true; fixed = true; }
+  if (fixed) { try { d.bringToFront(); } catch { /* ordering is best effort */ } }
   return d;
 }
 
@@ -309,7 +324,7 @@ async function handle(msg) {
       if (!adBoardOf(s)) throw new Error('The layer must be inside a City Politics ad board.');
       if (msg.kind === null) { put(s, 'slot', null); put(s, 'asset', null); break; }
       if (msg.kind === 'asset') { put(s, 'asset', msg.key); put(s, 'slot', null); break; }
-      if (!SLOT_KINDS.includes(msg.kind) || !/^[a-z][a-z0-9_-]{0,31}$/.test(msg.key || '')) throw new Error('Pick a slot kind and a short name (lowercase letters, digits, - or _).');
+      if (!SLOT_KINDS.includes(msg.kind) || !/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(msg.key || '')) throw new Error('Pick a slot kind and a short name (letters, digits, - or _; starting with a letter).');
       if (msg.kind === 'color' && s.type === 'text') throw new Error('A color slot is a shape (a rectangle behind a button, say), not text.');
       if (['headline', 'body', 'button'].includes(msg.kind) && s.type !== 'text') throw new Error('A text slot must be a text layer.');
       put(s, 'slot', { kind: msg.kind, key: msg.key });

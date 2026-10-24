@@ -153,6 +153,9 @@ function renderMotion() {
       el('div', { class: 'row' }, num('duration', 'ms'), num('delay', 'delay ms'), num('loops', 'times')),
       el('label', {}, alt, ' back and forth'));
     if (a.kind === 'slide') card.append(sel(['left', 'right', 'up', 'down'], 'direction'));
+    if (a.kind === 'color') { a.from ||= '#e4002b'; a.to ||= '#b30022'; }
+    if (a.kind === 'scale' && a.from == null) a.from = 0.8;
+    if (a.kind === 'slide') a.direction ||= 'left';
     if (a.kind === 'color') card.append(el('div', { class: 'row' }, el('input', { value: a.from || '#e4002b', 'aria-label': 'From color', on: { input: (e) => { a.from = e.target.value; } } }), el('input', { value: a.to || '#b30022', 'aria-label': 'To color', on: { input: (e) => { a.to = e.target.value; } } })));
     if (a.kind === 'scale') card.append(el('label', {}, 'from scale', el('input', { type: 'number', step: '0.1', value: a.from ?? 0.8, on: { input: (e) => { a.from = Number(e.target.value); } } })));
     box.append(card);
