@@ -1,6 +1,6 @@
 > **City Politics fork.** This is [MaticsLab/design](https://github.com/MaticsLab/design), City Politics INC's fork of
 > Penpot for **design.citypolitics.org**, the City Politics network's ad designer. It tracks Penpot's stable release
-> `2.18.4` and adds: City Politics ad board presets, the **City Politics Ads** plugin (`plugins/citypolitics-ads`:
+> `2.18.4`, is branded City Politics Design (our megaphone mark; light theme by default), and adds: City Politics ad board presets, the **City Politics Ads** plugin (`plugins/citypolitics-ads`:
 > templates, dynamic slots, IF/ELSE rules with a minimum-audience guard, motion with accessibility limits, a locked
 > "Paid for by" layer for political ads, and **Send to City Politics**), our frontend image and a Fly.io deployment
 > (`fly/`, `.github/workflows/citypolitics-deploy.yml`) with sign-in only through a City Politics account. Penpot is

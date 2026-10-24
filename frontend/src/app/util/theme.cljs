@@ -17,7 +17,8 @@
 (defonce ^:private color-scheme-listeners*
   (atom #{}))
 
-(def ^:const default "dark")
+;; City Politics: light is the default (like Figma); "dark" and "system" stay a choice in the profile.
+(def ^:const default "light")
 
 (defn get-system-theme
   []
@@ -48,13 +49,13 @@
 (defn resolve-theme
   "Resolves the profile's theme setting to the effective UI theme ('dark' or
   'light'): 'system' follows the given system theme, 'default' and an unset
-  theme mean dark, and any other value is taken as-is. Single source of truth
+  theme mean light (City Politics; Penpot's own default is dark), and any other value is taken as-is. Single source of truth
   for the app's own theme and the theme reported to plugins."
   [profile-theme system-theme]
   (cond
     (= profile-theme "system") system-theme
-    (= profile-theme "default") "dark"
-    :else (d/nilv profile-theme "dark")))
+    (= profile-theme "default") "light"
+    :else (d/nilv profile-theme "light")))
 
 (defn use-initialize
   [{profile-theme :theme}]

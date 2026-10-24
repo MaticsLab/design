@@ -32,7 +32,7 @@
   (let [state          (mf/deref refs/progress)
         profile        (mf/deref refs/profile)
         theme          (get profile :theme theme/default)
-        default-theme? (= theme/default theme)
+        default-theme? (= "dark" theme)
         error?         (:error state)
         healthy?       (:healthy state)
         visible?       (:visible state)

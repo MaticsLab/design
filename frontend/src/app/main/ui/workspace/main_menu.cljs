@@ -328,7 +328,8 @@
          "dark" (tr "workspace.header.menu.toggle-light-theme")
          "light" (tr "workspace.header.menu.toggle-system-theme")
          "system" (tr "workspace.header.menu.toggle-dark-theme")
-         (tr "workspace.header.menu.toggle-light-theme"))]
+         ;; City Politics: unset is light, so the next one is system.
+         (tr "workspace.header.menu.toggle-system-theme"))]
       [:> shortcuts* {:id :toggle-theme}]]
      (when (contains? cf/flags :render-switch)
        [:> dropdown-menu-item* {:on-click    toggle-render

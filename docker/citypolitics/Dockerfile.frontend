@@ -1,21 +1,38 @@
 # City Politics' designer frontend (MaticsLab/design): Penpot's official frontend image for the release we track, with
-# the City Politics Ads plugin served at /plugins/citypolitics-ads/ (nginx's existing /plugins location).
+#   - light as the default theme, and City Politics branding (the megaphone mark, "City Politics Design"): the compiled
+#     form of this fork's source changes, applied by docker/citypolitics/brand/apply.py (it checks every patch, so a
+#     Penpot release that moves the code fails the build instead of shipping half of it);
+#   - the City Politics Ads plugin at /plugins/citypolitics-ads/ (nginx's existing /plugins location).
 #
 # Build context: the repository root.
 #   docker build -f docker/citypolitics/Dockerfile.frontend .
-# With a frontend bundle built from this fork's sources (the ad board presets in app.main.constants; see
-# .github/workflows/citypolitics-source-build.yml), pass --build-arg BUNDLE=bundle-frontend and put it there first.
+# With a frontend bundle built from this fork's sources (see .github/workflows/citypolitics-source-build.yml), pass
+# --build-arg BUNDLE=bundles/frontend: only the branding is applied then (the sources already default to light).
 ARG PENPOT_VERSION=2.18.4
-FROM penpotapp/frontend:${PENPOT_VERSION}
+FROM penpotapp/frontend:${PENPOT_VERSION} AS penpot
+
+FROM public.ecr.aws/docker/library/python:3.12.7-slim-bookworm AS brand
 ARG BUNDLE=""
-USER root
-COPY ${BUNDLE:-docker/citypolitics/bundle-placeholder} /tmp/bundle/
+COPY --from=penpot /var/www/app /app
+COPY ${BUNDLE:-docker/citypolitics/bundle-placeholder} /bundle/
+COPY docker/citypolitics/brand /brand
 RUN set -e; \
-    if [ -f /tmp/bundle/index.html ]; then cp -a /tmp/bundle/. /var/www/app/; echo "frontend bundle: built from this fork"; else echo "frontend bundle: official ${PENPOT_VERSION}"; fi; \
-    rm -rf /tmp/bundle; \
-    mkdir -p /var/www/app/plugins/citypolitics-ads
+    if [ -f /bundle/index.html ]; then \
+      rm -rf /app && cp -a /bundle /app && python3 -I /brand/apply.py /app /brand --brand-only; \
+    else \
+      python3 -I /brand/apply.py /app /brand; \
+    fi
+
+FROM penpot
+USER root
+RUN rm -rf /var/www/app
+COPY --from=brand --chown=1001:0 /app /var/www/app
+RUN set -e; \
+    if [ -f /var/www/app/csp-script-hashes.txt ]; then mv /var/www/app/csp-script-hashes.txt /etc/nginx/csp-script-hashes.txt; fi; \
+    mkdir -p /var/www/app/plugins/citypolitics-ads; \
+    chmod -R g+w /var/www/app
 COPY --chown=1001:0 plugins/citypolitics-ads/manifest.json plugins/citypolitics-ads/plugin.js plugins/citypolitics-ads/ui.html plugins/citypolitics-ads/ui.js plugins/citypolitics-ads/ui.css plugins/citypolitics-ads/icon.svg /var/www/app/plugins/citypolitics-ads/
 LABEL org.opencontainers.image.source="https://github.com/MaticsLab/design" \
-      org.opencontainers.image.description="Penpot frontend with the City Politics Ads plugin (MPL-2.0)" \
+      org.opencontainers.image.description="City Politics Design: Penpot's frontend (MPL-2.0) with City Politics branding, light by default, and the City Politics Ads plugin" \
       org.opencontainers.image.licenses="MPL-2.0"
 USER penpot:penpot

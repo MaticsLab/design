@@ -47,9 +47,10 @@
         initial (mf/with-memo [profile]
                   (-> profile
                       (update :lang #(or % ""))
+                      ;; City Politics: an unset (or legacy "default") theme is light.
                       (update :theme #(if (= % "default")
-                                        "dark"
-                                        (or % "dark")))))
+                                        "light"
+                                        (or % "light")))))
 
         form    (fm/use-form :schema schema:options-form
                              :initial initial)]

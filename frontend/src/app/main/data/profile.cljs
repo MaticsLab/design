@@ -177,8 +177,9 @@
                                    ;; NOTE: this is a workaround for
                                    ;; the old data on the database
                                    ;; where whe have `default` value
-                                   (= current "default")
-                                   "dark"
+                                   ;; City Politics: unset and `default` are light.
+                                   (or (nil? current) (= current "default"))
+                                   "light"
 
                                    :else
                                    current)]

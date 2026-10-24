@@ -216,7 +216,7 @@
   (let [state             (mf/deref refs/export)
         profile           (mf/deref refs/profile)
         theme             (or (:theme profile) theme/default)
-        is-default-theme? (= theme/default theme)
+        is-default-theme? (= "dark" theme)
         error?            (:error state)
         healthy?          (:healthy? state)
         detail-visible?   (:detail-visible state)
