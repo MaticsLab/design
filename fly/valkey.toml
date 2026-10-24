@@ -1,0 +1,14 @@
+# Valkey (Redis-compatible) for Penpot's message bus: private (cp-design-valkey.internal:6379), memory only.
+# Deploy: flyctl deploy -c fly/valkey.toml
+app = "cp-design-valkey"
+primary_region = "ord"
+
+[build]
+  image = "valkey/valkey:8.1"
+
+[processes]
+  app = "valkey-server --bind :: 0.0.0.0 --protected-mode no --save '' --appendonly no --maxmemory 160mb --maxmemory-policy allkeys-lru"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

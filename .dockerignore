@@ -1,0 +1,6 @@
+# City Politics: builds with the repository root as context (docker/citypolitics/Dockerfile.frontend, flyctl deploy)
+# need only these. Penpot's own image builds use docker/images/ as their context and are unaffected.
+*
+!docker/citypolitics/
+!plugins/citypolitics-ads/
+!bundles/frontend/

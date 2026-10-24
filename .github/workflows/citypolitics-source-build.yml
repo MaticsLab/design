@@ -1,0 +1,40 @@
+# Builds Penpot's frontend from this fork's sources (so Penpot's own board-size menu lists the City Politics ad
+# presets, frontend/src/app/main/constants.cljs) in Penpot's devenv image, then deploys that bundle in our frontend
+# image. Manual and slow (the ClojureScript and render-wasm builds take most of an hour); the regular deploy
+# (citypolitics-deploy.yml) uses Penpot's official bundle plus our plugin, which has the same presets.
+# Secret: FLY_API_TOKEN.
+name: Build the designer from source (Fly.io)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: citypolitics-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Free disk space for the devenv image
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android || true
+      - name: Build the frontend bundle in Penpot's devenv
+        run: ./manage.sh build-frontend-bundle
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+        with:
+          version: 0.4.122
+      - name: Deploy the frontend with this bundle
+        run: |
+          [ -f bundles/frontend/index.html ] || { echo "::error::no bundle built"; exit 1; }
+          flyctl deploy . -c fly/frontend.toml --dockerfile docker/citypolitics/Dockerfile.frontend --build-arg BUNDLE=bundles/frontend --remote-only --ha=false --yes

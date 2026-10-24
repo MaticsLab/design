@@ -1,0 +1,8 @@
+{
+  "name": "City Politics Ads",
+  "description": "Ad board presets and templates, dynamic slots with IF/ELSE rules, motion and Send to City Politics.",
+  "code": "plugin.js",
+  "icon": "icon.svg",
+  "version": 2,
+  "permissions": ["content:read", "content:write", "library:read", "user:read", "allow:downloads"]
+}

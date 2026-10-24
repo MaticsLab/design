@@ -1,0 +1,32 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. Copyright (c) City Politics INC. */
+:root { --red: #e4002b; --ink: #111; --muted: #666; --line: #e3e3e3; --bg: #fff; --field: #f6f6f6; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ink: #f2f2f2; --muted: #a8a8a8; --line: #333; --bg: #1b1b1b; --field: #262626; } }
+:root[data-theme="dark"] { --ink: #f2f2f2; --muted: #a8a8a8; --line: #333; --bg: #1b1b1b; --field: #262626; }
+:root[data-theme="light"] { --ink: #111; --muted: #666; --line: #e3e3e3; --bg: #fff; --field: #f6f6f6; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 13px/1.45 Inter, system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+.top { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.tabs button { border: 0; background: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--muted); font: inherit; }
+.tabs button[aria-selected="true"] { background: var(--field); color: var(--ink); font-weight: 600; }
+main { padding: 4px 12px 16px; }
+h2 { font-size: 13px; margin: 14px 0 6px; } h3 { font-size: 12px; margin: 14px 0 4px; }
+.muted { color: var(--muted); }
+.error { color: var(--red); white-space: pre-line; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--field); color: var(--ink); cursor: pointer; }
+button.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+button.small { padding: 2px 6px; font-size: 12px; }
+button:disabled { opacity: .5; cursor: default; }
+label { display: block; margin: 6px 0; }
+input, select, textarea { width: 100%; font: inherit; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--ink); }
+input[type="checkbox"] { width: auto; }
+.list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.list li { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin: 8px 0; }
+.card header { display: flex; gap: 4px; align-items: center; }
+.card header input { flex: 1; }
+.cond { display: grid; grid-template-columns: 1fr 1fr auto; gap: 4px; margin: 4px 0; }
+.row { display: flex; gap: 6px; align-items: center; }
+.row > * { flex: 1; }
+.ok { color: #1b7f3b; }

@@ -32,8 +32,26 @@
    :grid-alignment true
    :background "var(--app-white)"})
 
+;; City Politics (MaticsLab/design): the City Politics network's ad sizes first, so advertisers start from a board our
+;; slots can hold (plugins/citypolitics-ads sends only these sizes).
 (def size-presets
-  [{:name "APPLE"}
+  [{:name "CITY POLITICS ADS"}
+   {:name "Leaderboard 728×90"
+    :width 728
+    :height 90}
+   {:name "Banner 468×60"
+    :width 468
+    :height 60}
+   {:name "Mobile banner 320×50"
+    :width 320
+    :height 50}
+   {:name "Medium rectangle 300×250"
+    :width 300
+    :height 250}
+   {:name "Native card 600×314"
+    :width 600
+    :height 314}
+   {:name "APPLE"}
    {:name "iPhone 16"
     :width 393
     :height 852}

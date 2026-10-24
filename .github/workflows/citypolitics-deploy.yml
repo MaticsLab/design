@@ -1,0 +1,118 @@
+# City Politics' designer (design.citypolitics.org) on Fly.io: builds our frontend image (Penpot's official frontend
+# for the release we track plus the City Politics Ads plugin, docker/citypolitics/Dockerfile.frontend) on Fly's
+# builder and deploys it with Penpot's official backend and exporter, Valkey, and Fly Postgres (fly/*.toml).
+#
+# Repository secrets (Settings → Secrets and variables → Actions). Only FLY_API_TOKEN is required to run; each of the
+# others, when set, is copied to the Fly apps on every deploy (when not set, whatever the apps already have is kept):
+#   FLY_API_TOKEN              a Fly.io token for the org that holds the apps (flyctl tokens create org)
+#   R2_ACCESS_KEY_ID           R2 S3 access key for the bucket citypolitics-design-assets
+#   R2_SECRET_ACCESS_KEY       its secret
+#   R2_ENDPOINT                https://<account id>.r2.cloudflarestorage.com
+#   PENPOT_OIDC_CLIENT_SECRET  the designer's client secret at citypolitics.org (the same value as the chicagopolitics
+#                              Worker's PENPOT_OIDC_CLIENT_SECRET)
+#   PENPOT_SMTP_PASSWORD       the Resend API key (Resend's SMTP password)
+#   PENPOT_SECRET_KEY          optional: Penpot's secret key (fly/bootstrap.sh makes one on the first run)
+name: Deploy the designer (Fly.io)
+
+on:
+  push:
+    branches: [citypolitics]
+    paths:
+      - 'plugins/citypolitics-ads/**'
+      - 'docker/citypolitics/**'
+      - 'fly/**'
+      - 'frontend/src/app/main/constants.cljs'
+      - '.github/workflows/citypolitics-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: 'Create the apps, Postgres and Valkey if they are missing (first deploy)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: citypolitics-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check the repository secrets (names only)
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          PENPOT_OIDC_CLIENT_SECRET: ${{ secrets.PENPOT_OIDC_CLIENT_SECRET }}
+          PENPOT_SMTP_PASSWORD: ${{ secrets.PENPOT_SMTP_PASSWORD }}
+          PENPOT_SECRET_KEY: ${{ secrets.PENPOT_SECRET_KEY }}
+        run: |
+          missing=""
+          {
+            echo "### Repository secrets"
+            for n in FLY_API_TOKEN R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_ENDPOINT PENPOT_OIDC_CLIENT_SECRET PENPOT_SMTP_PASSWORD PENPOT_SECRET_KEY; do
+              if [ -n "${!n:-}" ]; then echo "- \`$n\`: set"; else echo "- \`$n\`: **missing**"; missing="$missing $n"; fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ -n "$missing" ] && echo "::warning::Missing repository secrets:$missing"
+          if [ -z "${FLY_API_TOKEN:-}" ]; then echo "::error::FLY_API_TOKEN is missing: add it under Settings → Secrets and variables → Actions"; exit 1; fi
+
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+        with:
+          version: 0.4.122
+
+      - name: Bootstrap (apps, Postgres, Valkey, keys) when missing
+        if: github.event_name == 'push' || inputs.bootstrap
+        run: fly/bootstrap.sh
+
+      - name: Copy the repository secrets to the Fly apps
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          PENPOT_OIDC_CLIENT_SECRET: ${{ secrets.PENPOT_OIDC_CLIENT_SECRET }}
+          PENPOT_SMTP_PASSWORD: ${{ secrets.PENPOT_SMTP_PASSWORD }}
+          PENPOT_SECRET_KEY: ${{ secrets.PENPOT_SECRET_KEY }}
+        run: |
+          # NAME=VALUE lines on stdin only (never on a command line, never printed).
+          backend() {
+            [ -n "${R2_ACCESS_KEY_ID:-}" ] && printf 'AWS_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
+            [ -n "${R2_SECRET_ACCESS_KEY:-}" ] && printf 'AWS_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
+            [ -n "${R2_ENDPOINT:-}" ] && printf 'PENPOT_OBJECTS_STORAGE_S3_ENDPOINT=%s\n' "$R2_ENDPOINT"
+            [ -n "${PENPOT_OIDC_CLIENT_SECRET:-}" ] && printf 'PENPOT_OIDC_CLIENT_SECRET=%s\n' "$PENPOT_OIDC_CLIENT_SECRET"
+            [ -n "${PENPOT_SMTP_PASSWORD:-}" ] && printf 'PENPOT_SMTP_PASSWORD=%s\n' "$PENPOT_SMTP_PASSWORD"
+            [ -n "${PENPOT_SECRET_KEY:-}" ] && printf 'PENPOT_SECRET_KEY=%s\n' "$PENPOT_SECRET_KEY"
+            true
+          }
+          lines="$(backend)"
+          if [ -n "$lines" ]; then printf '%s\n' "$lines" | flyctl secrets import --stage -a cp-design-backend >/dev/null; fi
+          if [ -n "${PENPOT_SECRET_KEY:-}" ]; then printf 'PENPOT_SECRET_KEY=%s\n' "$PENPOT_SECRET_KEY" | flyctl secrets import --stage -a cp-design-exporter >/dev/null; fi
+          unset lines
+
+      - name: Deploy Valkey
+        run: flyctl deploy -c fly/valkey.toml --ha=false --yes
+      - name: Deploy the backend
+        run: flyctl deploy -c fly/backend.toml --ha=false --yes --wait-timeout 10m
+      - name: Deploy the exporter
+        run: flyctl deploy -c fly/exporter.toml --ha=false --yes
+      - name: Build our frontend image and deploy it
+        run: flyctl deploy . -c fly/frontend.toml --dockerfile docker/citypolitics/Dockerfile.frontend --remote-only --ha=false --yes
+
+      - name: Smoke test
+        run: |
+          for u in https://cp-design.fly.dev/ https://cp-design.fly.dev/plugins/citypolitics-ads/manifest.json https://design.citypolitics.org/; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$u" || true)
+            echo "$u → $code" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          curl -sf --max-time 30 https://cp-design.fly.dev/plugins/citypolitics-ads/manifest.json | grep -q '"City Politics Ads"'

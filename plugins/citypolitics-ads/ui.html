@@ -1,0 +1,79 @@
+<!doctype html>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+     distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/. Copyright (c) City Politics INC. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>City Politics Ads</title>
+  <link rel="stylesheet" href="ui.css">
+  <script type="module" src="ui.js"></script>
+</head>
+<body>
+  <header class="top"><b>City Politics Ads</b><span id="who" class="muted"></span></header>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="boards" aria-selected="true">Boards</button>
+    <button role="tab" data-tab="slots">Slots</button>
+    <button role="tab" data-tab="rules">Rules</button>
+    <button role="tab" data-tab="motion">Motion</button>
+    <button role="tab" data-tab="political">Political</button>
+    <button role="tab" data-tab="send">Send</button>
+  </nav>
+  <main>
+    <section data-panel="boards">
+      <h2>New ad board</h2>
+      <p class="muted">Our slot sizes. Ads made at other sizes can't be sent.</p>
+      <div id="sizes" class="grid"></div>
+      <h2>City Politics templates</h2>
+      <label>Size <select id="tpl-size"></select></label>
+      <div id="templates" class="grid"></div>
+      <h2>On this page</h2>
+      <ul id="board-list" class="list"></ul>
+    </section>
+    <section data-panel="slots" hidden>
+      <p id="slot-board" class="muted">Select a layer inside a City Politics ad board.</p>
+      <div id="slot-editor" hidden>
+        <p>Layer: <b id="slot-layer"></b></p>
+        <label>Make it dynamic as
+          <select id="slot-kind">
+            <option value="">Not dynamic</option>
+            <option value="headline">Headline</option><option value="body">Body text</option><option value="button">Button text</option>
+            <option value="image">Image</option><option value="color">Color</option><option value="asset">Alternate image (for rules)</option>
+          </select></label>
+        <label>Name <input id="slot-key" placeholder="headline" maxlength="32" pattern="[a-z][a-z0-9_-]*"></label>
+        <button id="slot-save" class="primary">Save slot</button>
+      </div>
+      <h3>Link (URL slot)</h3>
+      <label>Default link <input id="board-link" type="url" placeholder="https://example.org/"></label>
+      <button id="link-save">Save link</button>
+      <h3>Slots on this board</h3>
+      <ul id="slot-list" class="list"></ul>
+    </section>
+    <section data-panel="rules" hidden>
+      <p class="muted">Rules are checked in order; the first whose conditions all hold wins. Otherwise readers see the board as designed (the ELSE). ZIP rules need at least 3 ZIP codes; city and state rules have no minimum. Each rule is reviewed by City Politics staff.</p>
+      <div id="rules"></div>
+      <p><button id="rule-add">Add rule</button> <button id="rules-save" class="primary">Save rules</button></p>
+      <p id="rules-problems" class="error" role="alert"></p>
+    </section>
+    <section data-panel="motion" hidden>
+      <p class="muted">Fade, slide, scale or color. Everything stops within 15 s, plays at most 3 times and never flashes more than 3 times a second. Readers who ask for reduced motion see the board still. Penpot prototype links (After delay → Navigate to a board of the same size) become frames.</p>
+      <div id="motion"></div>
+      <p id="frames" class="muted"></p>
+      <p><button id="motion-add">Add animation</button> <button id="motion-save" class="primary">Save motion</button></p>
+      <p id="motion-problems" class="error" role="alert"></p>
+    </section>
+    <section data-panel="political" hidden>
+      <p class="muted">Political ads (candidates, committees, ballot measures, issues) carry a locked “Paid for by” layer. The plugin puts it back if it is removed, unlocked or edited, and City Politics draws it on every ad. It must match the campaign’s “Paid for by” line.</p>
+      <label><input type="checkbox" id="pol-on"> This is a political ad</label>
+      <label>Paid for by <input id="pol-text" maxlength="120" placeholder="Friends of Ana Rivera"></label>
+      <button id="pol-save" class="primary">Save</button>
+    </section>
+    <section data-panel="send" hidden>
+      <p class="muted">Sends every City Politics ad board on this page (or the ones you tick) to your account at citypolitics.org. Staff review each design and each rule before it can run. Then use it in a campaign.</p>
+      <ul id="send-list" class="list"></ul>
+      <button id="send" class="primary">Send to City Politics</button>
+      <div id="send-out" role="status"></div>
+    </section>
+  </main>
+</body>
+</html>

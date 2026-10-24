@@ -1,0 +1,41 @@
+# Penpot's backend (official image, unchanged), private: reached only by the frontend at
+# cp-design-backend.internal:6060. Postgres (cp-design-db, Fly Postgres) and Valkey (cp-design-valkey) are private too.
+# Assets: Cloudflare R2 (S3 API), bucket citypolitics-design-assets. Mail: Resend's SMTP. Secrets (flyctl secrets):
+#   PENPOT_DATABASE_URI, PENPOT_DATABASE_USERNAME, PENPOT_DATABASE_PASSWORD (cp-design-db's, over Flycast), PENPOT_SECRET_KEY, PENPOT_OIDC_CLIENT_SECRET, PENPOT_SMTP_PASSWORD,
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (R2 keys), PENPOT_OBJECTS_STORAGE_S3_ENDPOINT (the R2 account endpoint).
+# Deploy: flyctl deploy -c fly/backend.toml
+app = "cp-design-backend"
+primary_region = "ord"
+
+[build]
+  image = "penpotapp/backend:2.18.4"
+
+[env]
+  PENPOT_PUBLIC_URI = "https://design.citypolitics.org"
+  PENPOT_HTTP_SERVER_HOST = "::"
+  PENPOT_FLAGS = "enable-login-with-oidc disable-login-with-password disable-registration enable-oidc-registration disable-email-verification enable-smtp disable-onboarding enable-plugins"
+  PENPOT_REDIS_URI = "redis://cp-design-valkey.internal:6379/0"
+  PENPOT_OBJECTS_STORAGE_BACKEND = "s3"
+  PENPOT_OBJECTS_STORAGE_S3_BUCKET = "citypolitics-design-assets"
+  PENPOT_OBJECTS_STORAGE_S3_REGION = "auto"
+  # citypolitics.org as the OpenID Connect provider (MaticsLab/chicagopolitics worker/src/betterauth.js): only
+  # advertisers get in (the provider's own check, and the "advertiser" role Penpot requires here).
+  PENPOT_OIDC_CLIENT_ID = "citypolitics-design"
+  PENPOT_OIDC_BASE_URI = "https://citypolitics.org/api/auth/"
+  PENPOT_OIDC_SCOPES = "openid profile email"
+  PENPOT_OIDC_USER_INFO_SOURCE = "userinfo"
+  PENPOT_OIDC_ROLES = "advertiser"
+  PENPOT_OIDC_ROLES_ATTR = "roles"
+  PENPOT_SMTP_HOST = "smtp.resend.com"
+  PENPOT_SMTP_PORT = "465"
+  PENPOT_SMTP_SSL = "true"
+  PENPOT_SMTP_TLS = "false"
+  PENPOT_SMTP_USERNAME = "resend"
+  PENPOT_SMTP_DEFAULT_FROM = "City Politics Designer <design@citypolitics.org>"
+  PENPOT_SMTP_DEFAULT_REPLY_TO = "City Politics <hello@chicagopolitics.org>"
+  PENPOT_TELEMETRY_ENABLED = "false"
+  JAVA_OPTS = "-Xmx1200m -Xms256m -Djava.net.preferIPv6Addresses=true"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2048mb"

@@ -1,0 +1,28 @@
+# Penpot's exporter (official image, headless Chromium): PNG/PDF/SVG exports. Private, on Flycast
+# (cp-design-exporter.flycast:6061), so Fly starts it on the first export and stops it when idle.
+# Secret: PENPOT_SECRET_KEY (the backend's). Deploy: flyctl deploy -c fly/exporter.toml
+app = "cp-design-exporter"
+primary_region = "ord"
+
+[build]
+  image = "penpotapp/exporter:2.18.4"
+
+[env]
+  PENPOT_PUBLIC_URI = "https://design.citypolitics.org"
+  PENPOT_INTERNAL_URI = "http://cp-design.internal:8080"
+  PENPOT_HTTP_SERVER_HOST = "::"
+  PENPOT_REDIS_URI = "redis://cp-design-valkey.internal:6379/0"
+
+[[services]]
+  internal_port = 6061
+  protocol = "tcp"
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[services.ports]]
+    port = 6061
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1024mb"

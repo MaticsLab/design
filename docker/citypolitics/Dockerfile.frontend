@@ -1,0 +1,21 @@
+# City Politics' designer frontend (MaticsLab/design): Penpot's official frontend image for the release we track, with
+# the City Politics Ads plugin served at /plugins/citypolitics-ads/ (nginx's existing /plugins location).
+#
+# Build context: the repository root.
+#   docker build -f docker/citypolitics/Dockerfile.frontend .
+# With a frontend bundle built from this fork's sources (the ad board presets in app.main.constants; see
+# .github/workflows/citypolitics-source-build.yml), pass --build-arg BUNDLE=bundle-frontend and put it there first.
+ARG PENPOT_VERSION=2.18.4
+FROM penpotapp/frontend:${PENPOT_VERSION}
+ARG BUNDLE=""
+USER root
+COPY ${BUNDLE:-docker/citypolitics/bundle-placeholder} /tmp/bundle/
+RUN set -e; \
+    if [ -f /tmp/bundle/index.html ]; then cp -a /tmp/bundle/. /var/www/app/; echo "frontend bundle: built from this fork"; else echo "frontend bundle: official ${PENPOT_VERSION}"; fi; \
+    rm -rf /tmp/bundle; \
+    mkdir -p /var/www/app/plugins/citypolitics-ads
+COPY --chown=1001:0 plugins/citypolitics-ads/manifest.json plugins/citypolitics-ads/plugin.js plugins/citypolitics-ads/ui.html plugins/citypolitics-ads/ui.js plugins/citypolitics-ads/ui.css plugins/citypolitics-ads/icon.svg /var/www/app/plugins/citypolitics-ads/
+LABEL org.opencontainers.image.source="https://github.com/MaticsLab/design" \
+      org.opencontainers.image.description="Penpot frontend with the City Politics Ads plugin (MPL-2.0)" \
+      org.opencontainers.image.licenses="MPL-2.0"
+USER penpot:penpot

@@ -1,0 +1,33 @@
+# design.citypolitics.org: Penpot's frontend (nginx) with the City Politics Ads plugin. The only public app; it
+# proxies /api and /ws to the backend and /api/export to the exporter over Fly's private network.
+# Deploy from the repository root (the image is built there, from docker/citypolitics/Dockerfile.frontend):
+#   flyctl deploy . -c fly/frontend.toml --dockerfile docker/citypolitics/Dockerfile.frontend --remote-only
+app = "cp-design"
+primary_region = "ord"
+
+[env]
+  PENPOT_PUBLIC_URI = "https://design.citypolitics.org"
+  PENPOT_BACKEND_URI = "http://cp-design-backend.internal:6060"
+  PENPOT_EXPORTER_URI = "http://cp-design-exporter.flycast:6061"
+  # Sign-in only with a City Politics account (OIDC); no passwords, no open registration.
+  PENPOT_FLAGS = "enable-login-with-oidc disable-login-with-password disable-registration enable-oidc-registration disable-email-verification disable-onboarding enable-plugins"
+  PENPOT_OIDC_NAME = "City Politics"
+  PENPOT_HTTP_SERVER_MAX_BODY_SIZE = "104857600"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
