@@ -9,8 +9,10 @@
 #
 #   1. Light is the default theme (frontend/src/app/util/theme.cljs and the places that read an unset theme): new
 #      accounts and anyone who never picked a theme see the light UI; dark and system stay a choice in the profile.
-#   2. City Politics branding: the megaphone mark in place of Penpot's logo (the inline SVG sprite's logo symbols, the
-#      favicon, the login illustration, the link preview), "City Politics Design" in the browser tab, and the login and
+#   2. City Politics branding in place of Penpot's logo: our logo, the megaphone beside the CITY POLITICS wordmark
+#      (logo.svg), where Penpot's logo has its words (the sprite's wordmark symbols, the login page's logo and its
+#      illustration, the link preview); the megaphone alone (mark.svg, its cone plain) in the square slots (the sprite's
+#      icon and loader symbols, the favicon, the app icon). "City Politics Design" in the browser tab, and the login and
 #      register pages' taglines. Penpot's attribution stays: Help → About Penpot, the LICENSE and NOTICE.md.
 #
 # Every patch must match exactly as expected (the counts are checked), so a new Penpot release that moves the code makes
@@ -74,6 +76,11 @@ patch("index.html", "<body>", '<body class="light">')
 mark = open(os.path.join(BRAND, "mark.svg"), encoding="utf-8").read()
 inner = re.search(r"<g id=\"mark\">(.*)</g>\s*</svg>", mark, re.S).group(1).strip()
 MARK_BOX = "-12 16 134 134"
+logo = open(os.path.join(BRAND, "logo.svg"), encoding="utf-8").read()
+LOGO_BOX = re.search(r'viewBox="([^"]*)"', logo).group(1)
+logo_inner = re.sub(r"<!--.*?-->", "", re.search(r"<svg[^>]*>(.*)</svg>", logo, re.S).group(1), flags=re.S).strip()
+if "translate(59 76)" in mark + logo or 'id="wordmark"' not in logo_inner:
+    sys.exit("brand: mark.svg/logo.svg: not the plain-cone megaphone and its wordmark")
 
 
 def mark_symbol(sid, view_box):
@@ -85,11 +92,13 @@ def mark_symbol(sid, view_box):
 
 
 def wordmark_symbol(sid, view_box):
-    """Penpot's wordmark slot (1512 x 500): the megaphone and "City Politics", the words in the UI's text color."""
+    """Penpot's wordmark slot (1512 x 500): our logo as it is everywhere else, the megaphone beside the CITY POLITICS
+    wordmark (logo.svg, its own colors), the slot's full height, from its left edge."""
+    x, y, w, h = [float(v) for v in view_box.split()]
+    lx, ly, lw, lh = [float(v) for v in LOGO_BOX.split()]
+    width = min(w, h * lw / lh)
     return (f'<symbol viewBox="{view_box}" id="{sid}" xmlns="http://www.w3.org/2000/svg">'
-            f'<svg x="0" y="0" width="500" height="500" viewBox="{MARK_BOX}">{inner}</svg>'
-            '<text x="540" y="330" font-family="Work Sans, Inter, Arial, sans-serif" font-size="210" font-weight="700" '
-            'textLength="960" lengthAdjust="spacingAndGlyphs" style="fill:var(--app-black, currentColor)">City Politics</text></symbol>')
+            f'<svg x="{x}" y="{y}" width="{width:.1f}" height="{h}" viewBox="{LOGO_BOX}">{logo_inner}</svg></symbol>')
 
 
 def replace_symbol(html, sid, make):
@@ -116,14 +125,21 @@ html = re.sub(r'content="Penpot \| Full-stack design"', f'content="{NAME}"', htm
 html = re.sub(r'content="Penpot is the open-source design platform for teams that build digital products at scale\."',
               'content="Design ads for the City Politics network: presets, dynamic text and rules, motion, sent straight to your campaigns."', html)
 html = html.replace('content="@penpotapp"', 'content="@citypolitics"')
+# The login page's illustration is our logo (a wide image, not Penpot's tall one): it fits its column.
+if html.count("</head>") != 1:
+    sys.exit("brand: index.html: </head> not as expected")
+html = html.replace("</head>", '<style>.main_ui_auth__login-illustration img{max-inline-size:100%;block-size:auto}</style>\n</head>', 1)
 html = html.replace('<link rel="icon" href="images/favicon.png', '<link rel="apple-touch-icon" href="images/apple-touch-icon.png" />\n    <link rel="icon" href="images/favicon.png')
 if "Penpot | Full-stack design" in html or 'id="icon-penpot-logo"' not in html:
     sys.exit("brand: index.html: title or logo symbols not as expected")
 open(idx, "w", encoding="utf-8").write(html)
 
-# Images: the favicon, an app icon, the login illustration, the link preview.
+# The illustration's class, as the style above names it (Penpot's CSS modules: main_ui_auth__<class>).
+patch("js/main-auth.js", 'className:"main_ui_auth__login-illustration"', 'className:"main_ui_auth__login-illustration"')
+
+# Images: the favicon, an app icon, the login illustration (the logo), the link preview (the logo).
 for src, dst in (("favicon.png", "images/favicon.png"), ("apple-touch-icon.png", "images/apple-touch-icon.png"),
-                 ("megaphone-512.png", "images/registration-illustration.png"), ("link-preview.png", "images/penpot-link-preview.png")):
+                 ("login-logo.png", "images/registration-illustration.png"), ("link-preview.png", "images/penpot-link-preview.png")):
     shutil.copyfile(os.path.join(BRAND, src), os.path.join(APP, dst))
 
 # Translations: the browser tab's titles in every language ("… - Penpot" → "… - City Politics Design"), and in English
