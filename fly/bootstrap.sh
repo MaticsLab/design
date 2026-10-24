@@ -55,4 +55,7 @@ if ! "$FLY" secrets list -a cp-design-backend 2>/dev/null | grep -q PENPOT_SECRE
   unset key
   echo "secret key: set on the backend and the exporter"
 fi
+# design.citypolitics.org's certificate (Fly issues it once the DNS record points at cp-design.fly.dev: a CNAME,
+# DNS only, not proxied).
+if ! "$FLY" certs show design.citypolitics.org -a cp-design >/dev/null 2>&1; then "$FLY" certs add design.citypolitics.org -a cp-design >/dev/null && echo "certificate: requested"; fi
 echo "bootstrap: done"
